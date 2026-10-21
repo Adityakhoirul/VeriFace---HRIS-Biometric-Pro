@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full bg-slate-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiosk Presensi Wajah - VeriFace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes scan {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(100%); }
+        }
+        .scanner-line {
+            animation: scan 3s ease-in-out infinite;
+            height: 4px;
+        }
+        @keyframes blob {
+            0% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob {
+            animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+            animation-delay: 2s;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col text-slate-300 font-sans overflow-hidden bg-slate-950 selection:bg-emerald-500/30">
+    <!-- HEADER -->
+    <header class="flex justify-between items-center px-8 sm:px-10 py-6 bg-slate-900/40 backdrop-blur-xl border-b border-slate-700/50 shadow-2xl relative z-20">
+        <div class="flex items-center space-x-5">
+            <div class="bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 p-3.5 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                <i class="fa-solid fa-fingerprint text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="font-extrabold text-3xl tracking-widest text-white drop-shadow-md">VERIFACE <span class="font-light opacity-80">KIOSK</span></h1>
+                <p class="text-xs text-emerald-400 font-bold tracking-widest uppercase mt-1">Sistem Presensi AI Enterprise</p>
+            </div>
+        </div>
+        <div class="text-right">
+            <div id="live-clock" class="text-5xl font-bold text-white tracking-wider font-mono drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">00:00:00</div>
+            <div id="live-date" class="text-emerald-500 text-sm mt-2 font-medium tracking-wide">Tanggal</div>
+        </div>
+    </header>
+    
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col lg:flex-row p-6 lg:p-8 gap-6 lg:gap-8 relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black overflow-hidden">
+        
+        <!-- DECORATIVE SCI-FI GLOWS -->
+        <div class="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-emerald-500/10 rounded-full mix-blend-screen filter blur-[150px] pointer-events-none animate-blob"></div>
+        <div class="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-teal-500/10 rounded-full mix-blend-screen filter blur-[150px] pointer-events-none animate-blob animation-delay-2000"></div>
+
+        <!-- TOAST CONTAINER (Melayang di tengah atas) -->
+        <div id="toast-container" class="absolute top-8 left-1/2 -translate-x-1/2 z-50 space-y-3 pointer-events-none flex flex-col items-center w-full max-w-2xl px-4"></div>
+
+        <!-- LEFT: CAMERA VIEW -->
+        <div class="flex-1 flex flex-col bg-slate-900/40 backdrop-blur-xl rounded-3xl overflow-hidden border border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.2)] relative z-10">
+            <video id="webcam" autoplay playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
+            
+            <!-- SCANNING OVERLAY -->
+            <div id="scanning-overlay" class="absolute inset-0 border-[6px] border-emerald-500/20 flex flex-col justify-between p-8 sm:p-12 pointer-events-none transition-all duration-300 shadow-[inset_0_0_50px_rgba(16,185,129,0.1)]">
+                <div class="flex justify-between">
+                    <div class="w-20 h-20 border-t-[10px] border-l-[10px] border-emerald-400 rounded-tl-[2rem] filter drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                    <div class="w-20 h-20 border-t-[10px] border-r-[10px] border-emerald-400 rounded-tr-[2rem] filter drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                </div>
+                
+                <div class="self-center w-72 h-72 sm:w-96 sm:h-96 border-4 border-dashed border-emerald-400/30 rounded-full flex items-center justify-center relative">
+                    <div class="absolute inset-0 rounded-full border-2 border-emerald-400/20 animate-ping"></div>
+                    <i class="fa-solid fa-face-viewfinder text-8xl text-emerald-400/40 filter drop-shadow-[0_0_15px_rgba(52,211,153,0.5)]"></i>
+                </div>
+
+                <div class="absolute left-10 right-10 top-1/2 -translate-y-1/2 h-1.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent scanner-line shadow-[0_0_30px_rgba(52,211,153,1)] opacity-80"></div>
+
+                <div class="flex justify-between">
+                    <div class="w-20 h-20 border-b-[10px] border-l-[10px] border-emerald-400 rounded-bl-[2rem] filter drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                    <div class="w-20 h-20 border-b-[10px] border-r-[10px] border-emerald-400 rounded-br-[2rem] filter drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                </div>
+            </div>
+
+            <!-- TEKS NAMA KARYAWAN MELAYANG -->
+            <div id="detected-name-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-all duration-500 z-10 scale-95">
+                <div class="bg-slate-950/80 backdrop-blur-xl px-12 py-8 rounded-[3rem] border-2 border-emerald-400/60 shadow-[0_0_50px_rgba(16,185,129,0.5)] text-center">
+                    <i class="fa-solid fa-circle-check text-emerald-400 text-5xl mb-3"></i>
+                    <h2 id="detected-name-text" class="text-3xl font-extrabold text-white tracking-wide drop-shadow-md">Nama Karyawan</h2>
+                    <p class="text-emerald-400 text-sm mt-1.5 font-semibold tracking-wider uppercase">Kehadiran Tercatat</p>
+                </div>
+            </div>
+
+            <!-- FOOTER KAMERA -->
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-slate-950/90 to-transparent p-6 sm:p-10 pt-32 text-center">
+                <div class="inline-flex items-center space-x-4 bg-slate-900/80 backdrop-blur-xl border border-slate-700/80 text-emerald-300 font-bold px-8 py-4 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.15)]">
+                    <span class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <span class="tracking-wide">AI VISUAL SENSOR ACTIVE</span>
+                </div>
+                <div class="mt-4 pointer-events-auto">
+                    <button id="btn-foto-fallback" type="button" onclick="openFotoModal()" class="inline-flex items-center space-x-3 bg-slate-800/80 hover:bg-slate-700 border border-amber-500/40 text-amber-300 font-semibold px-6 py-3 rounded-2xl transition-all">
+                        <i class="fa-solid fa-camera-retro"></i><span>Wajah tidak terbaca? Absen via Foto</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: LIVE LOGS -->
+        <div class="w-full lg:w-[420px] flex flex-col bg-slate-900/40 backdrop-blur-xl rounded-3xl border border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.2)] p-6 lg:p-8 z-10 shrink-0">
+            <h3 class="font-extrabold text-white text-xl flex items-center space-x-3 mb-6 border-b border-slate-700/50 pb-5 tracking-tight">
+                <i class="fa-solid fa-bolt text-amber-400"></i>
+                <span>Live Analytics</span>
+            </h3>
+            <div class="flex-1 overflow-y-auto space-y-4 pr-2" id="log-kehadiran-list">
+                <!-- Logs go here -->
+            </div>
+            <div class="pt-6 mt-auto border-t border-slate-700/50 text-center">
+                <span id="mode-badge" class="inline-block text-xs font-mono font-bold px-4 py-2.5 rounded-xl bg-emerald-900/30 text-emerald-400 border border-emerald-500/30 shadow-sm">Koneksi Live MySQL Aktif</span>
+            </div>
+        </div>
+    </main>
+    
+    <!-- MODAL ABSEN VIA FOTO (alternatif bila verifikasi wajah gagal) -->
+    <div id="foto-modal" class="hidden fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-extrabold text-white"><i class="fa-solid fa-camera-retro text-amber-400 mr-2"></i>Absen via Foto</h3>
+                <button type="button" onclick="closeFotoModal()" class="text-slate-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-xs text-slate-400 mb-4">Gunakan hanya jika verifikasi wajah gagal. Absen akan berstatus <b class="text-amber-300">Menunggu Verifikasi</b> admin. Lokasi tidak diperlukan.</p>
+            <label class="block text-sm font-semibold text-slate-300 mb-1">NIK Karyawan</label>
+            <input id="foto-nik" type="text" autocomplete="off" class="w-full mb-4 px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-white focus:outline-none focus:border-amber-400" placeholder="Masukkan NIK">
+            <label class="block text-sm font-semibold text-slate-300 mb-1">Foto Selfie / Bukti</label>
+            <input id="foto-file" type="file" accept="image/*" capture="user" onchange="previewFoto(this)" class="w-full mb-3 text-sm text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-amber-500 file:text-slate-900 file:font-bold">
+            <img id="foto-preview" class="hidden w-full max-h-60 object-contain rounded-xl border border-slate-700 mb-4" alt="Pratinjau foto">
+            <button id="foto-submit" type="button" onclick="submitFotoAbsen()" class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-900 font-extrabold transition-all">Kirim Absen</button>
+        </div>
+    </div>
+
+    <!-- Hidden Element untuk Pemrosesan Gambar AI -->
+    <canvas id="hidden-canvas" class="hidden"></canvas>
+
+    <script>
+        const API_URL = 'absensi_api.php';
+
+        let currentStream = null;
+        let autoScanInterval = null;
+        let isProcessingScan = false;
+        let lastScanTime = 0;
+        let lastErrorTime = 0;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initClock();
+            startCamera();
+            renderLiveLogs();
+            
+            // Auto-refresh log presensi apabila ada orang absen dari Kiosk/tab lain (Live Database)
+            setInterval(renderLiveLogs, 6000);
+
+
+        });
+
+        function initClock() {
+            const clockEl = document.getElementById('live-clock');
+            const dateEl = document.getElementById('live-date');
+            setInterval(() => {
+                const now = new Date();
+                clockEl.textContent = now.toLocaleTimeString('id-ID');
+                dateEl.textContent = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            }, 1000);
+        }
+
+        async function startCamera() {
+            try {
+                const constraints = { video: { width: 1280, height: 720, facingMode: 'user' } };
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                const videoElement = document.getElementById('webcam');
+                if (videoElement) {
+                    videoElement.srcObject = currentStream;
+                    startAutoScan();
+                }
+            } catch (err) {
+                console.error("Gagal membuka kamera: ", err);
+                showNotification('error', 'Gagal mengakses kamera. Mohon izinkan browser menggunakan kamera.');
+            }
+        }
+
+        // FUNGSI NOTIFIKASI KIOSK (Bentuk lebih besar agar mudah dibaca di layar)
+        function showNotification(type, message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `flex items-center space-x-5 p-5 sm:p-6 rounded-3xl shadow-2xl border-2 transition-all duration-500 transform -translate-y-8 opacity-0 w-full backdrop-blur-xl ${
+                type === 'success' ? 'bg-slate-900/90 text-emerald-100 border-emerald-500/50 shadow-[0_10px_40px_rgba(16,185,129,0.3)]' : 
+                type === 'error' ? 'bg-slate-900/90 text-red-100 border-red-500/50 shadow-[0_10px_40px_rgba(239,68,68,0.3)]' : 
+                'bg-slate-900/90 text-amber-100 border-amber-500/50 shadow-[0_10px_40px_rgba(245,158,11,0.3)]'
+            }`;
+            
+            const icon = type === 'success' ? 'fa-circle-check text-emerald-400' : type === 'error' ? 'fa-triangle-exclamation text-red-400' : 'fa-circle-info text-amber-400';
+
+            toast.innerHTML = `<i class="fa-solid ${icon} text-5xl shrink-0 filter drop-shadow-[0_0_10px_currentColor]"></i><div class="flex-1 font-bold text-lg sm:text-xl leading-snug tracking-wide">${message}</div>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('-translate-y-8', 'opacity-0'), 50);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-8');
+                setTimeout(() => toast.remove(), 500);
+            }, 5000);
+        }
+
+        function playVoice(pesan) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(pesan);
+                utterance.lang = 'id-ID'; window.speechSynthesis.speak(utterance);
+            }
+        }
+
+                // GPS: simpan posisi terakhir & pakai cache agar scan pertama tidak gagal karena timeout
+        let lastKnownCoords = null;
+        function getGpsCoords() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) return resolve(lastKnownCoords);
+                const ok = pos => { lastKnownCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude }; resolve(lastKnownCoords); };
+                navigator.geolocation.getCurrentPosition(ok, () => {
+                    // Fallback: akurasi rendah (Wi-Fi/jaringan), lalu posisi cache terakhir
+                    navigator.geolocation.getCurrentPosition(ok, () => resolve(lastKnownCoords),
+                        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+                }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 });
+            });
+        }
+        if (navigator.geolocation) getGpsCoords();
+
+        async function performAutoScan() {
+            if (!currentStream || isProcessingScan) return;
+            if (Date.now() - lastScanTime < 6000) return; // Cooldown 6 detik setelah absen sukses
+
+            const video = document.getElementById('webcam');
+            if (!video || video.readyState < 2) return;
+
+            const canvas = document.getElementById('hidden-canvas');
+            const ctx = canvas.getContext('2d');
+            const overlay = document.getElementById('scanning-overlay');
+
+            isProcessingScan = true;
+            overlay.classList.add('border-amber-500/40');
+            overlay.classList.remove('border-emerald-500/20');
+
+            // Perkecil frame scan (maks 640px) agar upload & deteksi di server lebih cepat
+            const scanScale = Math.min(1, 640 / video.videoWidth);
+            canvas.width = Math.round(video.videoWidth * scanScale); canvas.height = Math.round(video.videoHeight * scanScale);
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const currentScanBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+            try {
+                // Ambil koordinat GPS sebelum memposting scan wajah ke backend PHP
+                let coords = null;
+                try {
+                    coords = await getGpsCoords();
+                } catch (geoErr) {
+                    console.warn("Gagal membaca GPS di Kiosk: ", geoErr);
+                }
+
+                const response = await fetch(`${API_URL}?action=absensi_scan`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        image_base64: currentScanBase64,
+                        latitude: coords ? coords.lat : null,
+                        longitude: coords ? coords.lng : null
+                    })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    const data = result.data;
+                    showNotification('success', `Sukses Verifikasi! Selamat Bekerja, ${data.nama}.`);
+                    playVoice(`Absen berhasil. Selamat bekerja, ${data.nama}.`);
+                    renderLiveLogs(); lastScanTime = Date.now();
+                    
+                    overlay.classList.add('bg-emerald-500/20', 'border-emerald-500/60');
+                    setTimeout(() => overlay.classList.remove('bg-emerald-500/20', 'border-emerald-500/60'), 2500);
+                    
+                    // Tampilkan nama melayang di tengah layar
+                    const nameOverlay = document.getElementById('detected-name-overlay');
+                    document.getElementById('detected-name-text').textContent = data.nama;
+                    nameOverlay.classList.remove('opacity-0', 'scale-95');
+                    nameOverlay.classList.add('opacity-100', 'scale-100');
+                    setTimeout(() => {
+                        nameOverlay.classList.remove('opacity-100', 'scale-100');
+                        nameOverlay.classList.add('opacity-0', 'scale-95');
+                    }, 4000);
+                } else {
+                    // Penanganan Filter Error
+                    if (response.status === 403 && Date.now() - lastErrorTime > 10000) {
+                        showNotification('error', result.message); playVoice("Akses ditolak. Percobaan penipuan terdeteksi."); lastErrorTime = Date.now();
+                    } else if (response.status === 401 && Date.now() - lastErrorTime > 10000) {
+                        showNotification('error', 'Wajah tidak dikenali. Coba lagi atau gunakan tombol "Absen via Foto".'); playVoice("Verifikasi gagal. Wajah tidak terdaftar."); lastErrorTime = Date.now();
+                    } else if (response.status === 404 && Date.now() - lastErrorTime > 15000) {
+                        showNotification('warning', result.message || 'Sistem belum memiliki data karyawan.'); playVoice("Sistem kosong."); lastErrorTime = Date.now();
+                    } else if (response.status >= 500 && Date.now() - lastErrorTime > 15000) {
+                        showNotification('error', 'Terjadi kesalahan internal pada AI Engine.'); playVoice("Terjadi kesalahan pada server AI."); lastErrorTime = Date.now();
+                    }
+                }
+            } catch (err) {
+                if (Date.now() - lastErrorTime > 15000) {
+                    showNotification('error', 'Koneksi ke backend HRIS terputus.'); playVoice("Koneksi jaringan terputus."); lastErrorTime = Date.now();
+                }
+            } finally {
+                overlay.classList.remove('border-amber-500/40'); overlay.classList.add('border-emerald-500/20');
+                isProcessingScan = false;
+            }
+        }
+
+        // ---- ABSEN ALTERNATIF VIA UNGGAH FOTO ----
+        let fotoDataUrl = null;
+
+        function openFotoModal() { document.getElementById('foto-modal').classList.remove('hidden'); }
+        function closeFotoModal() {
+            document.getElementById('foto-modal').classList.add('hidden');
+            fotoDataUrl = null;
+            document.getElementById('foto-file').value = '';
+            document.getElementById('foto-preview').classList.add('hidden');
+        }
+
+        // Perkecil foto (maks 1024px, JPEG) agar ringan dikirim
+        function previewFoto(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const img = new Image();
+            img.onload = () => {
+                const scale = Math.min(1, 1024 / Math.max(img.width, img.height));
+                const c = document.createElement('canvas');
+                c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+                c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                fotoDataUrl = c.toDataURL('image/jpeg', 0.85);
+                const prev = document.getElementById('foto-preview');
+                prev.src = fotoDataUrl; prev.classList.remove('hidden');
+                URL.revokeObjectURL(img.src);
+            };
+            img.onerror = () => { fotoDataUrl = null; showNotification('error', 'File bukan gambar yang valid.'); };
+            img.src = URL.createObjectURL(file);
+        }
+
+        async function submitFotoAbsen() {
+            const nik = document.getElementById('foto-nik').value.trim();
+            if (!nik) { showNotification('warning', 'NIK wajib diisi.'); return; }
+            if (!fotoDataUrl) { showNotification('warning', 'Pilih atau ambil foto terlebih dahulu.'); return; }
+            const btn = document.getElementById('foto-submit');
+            btn.disabled = true; btn.textContent = 'Mengirim...';
+            try {
+                const response = await fetch(`${API_URL}?action=absensi_foto`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nik, image_base64: fotoDataUrl })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('success', `${result.message} (${result.data.nama})`);
+                    playVoice('Absen foto dicatat. Menunggu verifikasi admin.');
+                    lastScanTime = Date.now(); renderLiveLogs();
+                    closeFotoModal(); document.getElementById('foto-nik').value = '';
+                } else {
+                    showNotification('error', result.message || 'Absen via foto gagal.');
+                }
+            } catch (err) {
+                showNotification('error', 'Koneksi ke backend HRIS terputus.');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Kirim Absen';
+            }
+        }
+
+        function startAutoScan() { if (autoScanInterval) clearInterval(autoScanInterval); autoScanInterval = setInterval(performAutoScan, 1000); }
+
+        async function renderLiveLogs() {
+            const container = document.getElementById('log-kehadiran-list'); let logs = [];
+            try {
+                const response = await fetch(`${API_URL}?action=get_logs`); const result = await response.json();
+                if (result.success) logs = result.data.map(log => ({ nik: log.nik, nama: log.nama, divisi: log.divisi, time: log.scan_time.split(' ')[1], status: log.status, image: `face_db/${log.nik}.jpg` }));
+            } catch (err) {}
+
+            if (logs.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-500 py-16"><i class="fa-solid fa-satellite-dish text-6xl mb-4 opacity-30"></i><p class="text-sm font-medium tracking-wide">Menunggu data sensor...</p></div>`; return;
+            }
+            container.innerHTML = "";
+            logs.slice(0, 6).forEach(log => {
+                const card = document.createElement('div'); card.className = "flex items-center space-x-4 p-4 bg-slate-800/40 hover:bg-slate-800/70 rounded-2xl border border-slate-700/50 transition-all group";
+                card.innerHTML = `<img src="${log.image}" class="w-12 h-12 rounded-xl object-cover border border-slate-700 shadow-sm" onerror="this.src='https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'">
+                    <div class="flex-1 min-w-0"><p class="font-extrabold text-white truncate tracking-tight">${log.nama}</p><p class="text-[11px] text-slate-400 mt-0.5 font-medium">${log.nik} • <span class="text-emerald-400">${log.status}</span></p></div>
+                    <div class="text-right text-xs font-mono font-bold text-emerald-400 bg-slate-900 px-3 py-2.5 rounded-xl border border-slate-700 shadow-inner group-hover:bg-slate-950 transition-colors">${log.time}</div>`;
+                container.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
